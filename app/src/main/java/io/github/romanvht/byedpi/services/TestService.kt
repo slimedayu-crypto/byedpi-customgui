@@ -38,14 +38,40 @@ class TestService : Service() {
         private const val CHANNEL = "Proxy test"
         private const val RESULTS_FILE = "proxy_test_results.json"
         private const val NOTIFICATION_ID = 4
+        // Auto tune checks whitelisted apps through every candidate. Bounds keep the run
+        // predictable on slow networks while covering the apps the user actually uses.
+        private const val MAX_AUTO_APPS = 8
+        private const val APP_CHECK_TIMEOUT_MS = 5000
+        private const val APP_CHECK_CONCURRENCY = 3
+        private const val APP_CHECK_BODY_BYTES = 128 * 1024
         private val mutableState = MutableStateFlow(TestState())
         private val resultsLock = Any()
         val state: StateFlow<TestState> = mutableState.asStateFlow()
         val isRunning: Boolean
             get() = state.value.isRunning
 
-        fun start(context: Context) {
+        // Set before the service starts and read by it; autoRun is also read from an IO thread.
+        @Volatile
+        private var autoRun = false
+        @Volatile
+        private var resumeMode: Mode? = null
+
+        fun start(context: Context) = begin(context, auto = false, resume = null)
+
+        /**
+         * Quick automatic test: tries the most promising strategies, stops at the first good one,
+         * applies the best result and brings the bypass back up if it was running.
+         */
+        fun startAuto(context: Context) {
             if (isRunning) return
+            val (status, mode) = appStatus
+            begin(context, auto = true, resume = if (status == AppStatus.Running) mode else null)
+        }
+
+        private fun begin(context: Context, auto: Boolean, resume: Mode?) {
+            if (isRunning) return
+            autoRun = auto
+            resumeMode = resume
             ServiceManager.refresh(context)
             val previous = state.value
             mutableState.value = previous.copy(
@@ -61,6 +87,9 @@ class TestService : Service() {
             } catch (e: Exception) {
                 mutableState.value = previous.copy(failed = true)
                 Log.e(TAG, "Failed to start proxy tests", e)
+                autoRun = false
+                resumeMode?.let { ServiceManager.restart(context, it) }
+                resumeMode = null
             }
         }
 
@@ -166,6 +195,8 @@ class TestService : Service() {
             var currentStrategy: StrategyResult? = null
             var prepared = false
             var failed = false
+            var finishedAll = false
+            val auto = autoRun
             val strategies = mutableListOf<StrategyResult>()
             val stopWatcher = launch {
                 try {
@@ -200,7 +231,7 @@ class TestService : Service() {
                 for ((index, strategy) in strategies.withIndex()) {
                     ensureActive()
                     currentStrategy = strategy
-                    strategy.totalRequests = options.sites.size * options.requestsCount
+                    strategy.totalRequests = options.sites.size
                     publish(strategies, index + 1)
                     val configuration = configurations[index].getOrNull()
                     if (configuration == null || !checkStrategy(strategy, strategies, configuration, options)) {
@@ -211,8 +242,12 @@ class TestService : Service() {
                     saveResults(strategies)
                     stopEngine()
                     currentStrategy = null
-                    delay(options.delaySec * 500L)
+                    delay((options.delaySec * 500L).coerceAtLeast(300L))
                 }
+                if (auto && !failed) {
+                    verifyBest(strategies, options)
+                }
+                finishedAll = true
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -248,6 +283,7 @@ class TestService : Service() {
                         strategies = snapshot(strategies),
                         failed = failed,
                     ) else previous.copy(failed = failed)
+                    if (auto) finishAuto(strategies, apply = finishedAll && !failed)
                 }
             }
         }
@@ -265,7 +301,9 @@ class TestService : Service() {
             supervisorScope {
                 val engineExit = async { current.awaitExit() }
                 val check = async {
-                    delay(settings.delaySec * 500L)
+                    // Give the engine time to bind the SOCKS port before the first request;
+                    // otherwise the first few sites fail for no reason.
+                    delay((settings.delaySec * 500L).coerceAtLeast(1200L))
                     val host = when (configuration.host) {
                         "0.0.0.0" -> "127.0.0.1"
                         "::", "[::]" -> "::1"
@@ -279,13 +317,18 @@ class TestService : Service() {
                         fullLog = true,
                         onSiteChecked = { site, successCount, countRequests ->
                             withContext(Dispatchers.Main.immediate) {
-                                strategy.currentProgress += countRequests
-                                strategy.successCount += successCount
+                                // One point per reachable site keeps the score comparable
+                                // (e.g. "30/32") no matter how many attempts were made.
+                                strategy.currentProgress += 1
+                                if (successCount > 0) strategy.successCount += 1
                                 strategy.siteResults.add(SiteResult(site, successCount, countRequests))
                                 publish(strategies)
                             }
                         }
                     )
+                    if (settings.appPackages.isNotEmpty()) {
+                        checkApps(strategy, strategies, settings, host, configuration.port)
+                    }
                     true
                 }
                 try {
@@ -304,6 +347,63 @@ class TestService : Service() {
             Log.e(TAG, "Proxy test engine failed", e)
             Toast.makeText(this, getString(R.string.failed_to_start, Sender.Proxy.name), Toast.LENGTH_SHORT).show()
             false
+        }
+    }
+
+    /**
+     * Deep-checks whitelisted apps through the same candidate engine. App results are
+     * weighted higher than sites when the best strategy is picked.
+     */
+    private suspend fun checkApps(
+        strategy: StrategyResult,
+        strategies: List<StrategyResult>,
+        settings: TestSettings,
+        host: String,
+        port: Int,
+    ) {
+        strategy.appMaxPoints = settings.appPackages.size * AppCheckStatus.WORKING.points
+        val checker = AppCheckUtils(
+            proxyIp = host,
+            proxyPort = port,
+            timeoutMs = APP_CHECK_TIMEOUT_MS,
+            retryFailed = false,
+            // Markers live near the top of the page, 128 KB is plenty and saves traffic.
+            bodyLimitBytes = APP_CHECK_BODY_BYTES,
+        )
+        checker.checkApps(settings.appPackages, concurrency = APP_CHECK_CONCURRENCY) { result ->
+            val status = when (result.status) {
+                AppCheckUtils.Status.WORKING -> AppCheckStatus.WORKING
+                AppCheckUtils.Status.PARTIAL -> AppCheckStatus.PARTIAL
+                AppCheckUtils.Status.FAILED -> AppCheckStatus.FAILED
+            }
+            // Resolve the label outside the main thread and share one lookup per app.
+            val label = appLabel(result.packageName)
+            withContext(Dispatchers.Main.immediate) {
+                strategy.appPoints += status.points
+                strategy.addAppResult(
+                    AppCheckResult(
+                        packageName = result.packageName,
+                        appName = label,
+                        status = status,
+                        latencyMs = result.latencyMs,
+                        deep = result.deep,
+                    )
+                )
+                publish(strategies)
+            }
+        }
+    }
+
+    private val appLabels = mutableMapOf<String, String>()
+
+    private fun appLabel(packageName: String): String = synchronized(appLabels) {
+        appLabels.getOrPut(packageName) {
+            try {
+                val info = packageManager.getApplicationInfo(packageName, 0)
+                packageManager.getApplicationLabel(info).toString()
+            } catch (_: Exception) {
+                packageName
+            }
         }
     }
 
@@ -339,7 +439,9 @@ class TestService : Service() {
         val sniValue = prefs.getStringNotNull("byedpi_proxytest_sni", "google.com")
         val content = if (userCommands) prefs.getStringNotNull("byedpi_proxytest_commands", "")
         else assets.open("proxytest_strategies.list").bufferedReader().use { it.readText() }
-        val commands = content.replace("{sni}", "\"${sniValue}\"").lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val lines = content.replace("{sni}", "\"${sniValue}\"").lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val auto = autoRun
+        val commands = if (auto) AutoTuneUtils.candidates(this, lines) else lines
         val host = prefs.getStringNotNull("byedpi_proxy_ip", "127.0.0.1")
         val port = prefs.getIntStringNotNull("byedpi_proxy_port", 1080)
         val delaySec = prefs.getIntStringNotNull("byedpi_proxytest_delay", 1).coerceAtLeast(0)
@@ -347,8 +449,21 @@ class TestService : Service() {
         val requestTimeout = prefs.getLongStringNotNull("byedpi_proxytest_timeout", 5).coerceAtLeast(1)
         val requestLimit = prefs.getIntStringNotNull("byedpi_proxytest_limit", 20).coerceAtLeast(1)
         DomainListUtils.syncLists(this)
-        return TestSettings(DomainListUtils.getActiveDomains(this).toList(), commands, host, port,
-            delaySec, requestsCount, requestTimeout, requestLimit)
+        val sites = DomainListUtils.getActiveDomains(this).toList()
+        val appPackages = if (auto) whitelistedApps() else emptyList()
+        return TestSettings(sites, commands, host, port, delaySec, requestsCount, requestTimeout,
+            requestLimit, appPackages)
+    }
+
+    /** Apps that ByeDPI processes (whitelist) are checked with every auto candidate. */
+    private fun whitelistedApps(): List<String> {
+        val prefs = getPreferences()
+        if (prefs.getStringNotNull("applist_type", "blacklist") != "whitelist") return emptyList()
+        return prefs.getStringSet("selected_apps", emptySet())
+            .orEmpty()
+            .filter { it != packageName }
+            .sorted()
+            .take(MAX_AUTO_APPS)
     }
 
     private fun resetStrategyResult(strategy: StrategyResult, settings: TestSettings) {
@@ -356,10 +471,65 @@ class TestService : Service() {
         strategy.currentProgress = 0
         strategy.siteResults.clear()
         strategy.siteResults.addAll(settings.sites.map { SiteResult(it, 0, settings.requestsCount) })
+        strategy.clearAppResults()
+        strategy.appPoints = 0
+        strategy.appMaxPoints = 0
+    }
+
+    /**
+     * Re-runs the best automatic candidate before applying it. A single lucky pass should not
+     * silently replace a working bypass; the second pass uses at least two attempts per site.
+     */
+    private suspend fun verifyBest(strategies: MutableList<StrategyResult>, settings: TestSettings) {
+        val best = AutoTuneUtils.pickBest(strategies) ?: return
+
+        val configuration = try {
+            testConfiguration(this, best.command, settings.host, settings.port)
+        } catch (e: Exception) {
+            Log.e(TAG, "Cannot prepare strategy verification", e)
+            return
+        }
+
+        val verifySettings = settings.copy(requestsCount = maxOf(2, settings.requestsCount))
+        val firstScore = best.weightedPercentage
+        resetStrategyResult(best, verifySettings)
+        best.isCompleted = false
+        publish(strategies)
+        val verified = checkStrategy(best, strategies, configuration, verifySettings)
+        if (!verified) resetStrategyResult(best, settings)
+        best.isCompleted = true
+        publish(strategies)
+        saveResults(strategies)
+        stopEngine()
+        Log.i(TAG, "Verified best strategy: $firstScore -> ${best.weightedPercentage}")
+    }
+
+    private fun finishAuto(strategies: List<StrategyResult>, apply: Boolean) {
+        val app = applicationContext
+        val resume = resumeMode
+        autoRun = false
+        resumeMode = null
+        val best = if (apply) AutoTuneUtils.pickBest(strategies) else null
+        if (best != null) {
+            app.getPreferences().edit(commit = true) { putString("byedpi_cmd_args", best.command) }
+            HistoryUtils(app).addCommand(best.command)
+            AutoTuneUtils.saveProfile(app, AutoTuneUtils.networkKey(app), best.command)
+            Toast.makeText(app, R.string.auto_strategy_switched, Toast.LENGTH_LONG).show()
+        } else if (apply) {
+            Toast.makeText(app, R.string.auto_strategy_not_found, Toast.LENGTH_LONG).show()
+        }
+        HealthMonitor.onTuneFinished(best != null)
+        // Never leave the user without the bypass they had running before the test.
+        resume?.let { ServiceManager.restart(app, it) }
     }
 
     private fun snapshot(strategies: List<StrategyResult>): List<StrategyResult> =
-        strategies.map { it.copy(siteResults = it.siteResults.toMutableList()) }
+        strategies.map {
+            it.copy(
+                siteResults = it.siteResults.toMutableList(),
+                appResults = it.appList.toMutableList(),
+            )
+        }
 
     private suspend fun saveResults(strategies: List<StrategyResult>) {
         val results = snapshot(strategies)

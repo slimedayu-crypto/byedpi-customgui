@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:alpha="0.55"
+    android:src="@drawable/pat_dot_tile"
+    android:tileMode="repeat"
+    android:tint="?attr/colorOnPrimary"
+    android:tintMode="src_in" />

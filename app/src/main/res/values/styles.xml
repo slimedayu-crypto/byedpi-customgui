@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Toolbar -->
+    <style name="AppToolbar" parent="Widget.Material3.Toolbar.Surface">
+        <item name="android:background">?attr/colorSurface</item>
+        <item name="titleTextAppearance">@style/ToolbarTitle</item>
+        <item name="titleCentered">false</item>
+    </style>
+
+    <style name="ToolbarTitle" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Cards -->
+    <style name="SmallShadowCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">?attr/appCardStrokeWidth</item>
+        <item name="strokeColor">?attr/appCardStrokeColor</item>
+    </style>
+
+    <style name="HeroCard" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">?attr/appHeroRadius</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">?attr/appCardStrokeWidth</item>
+        <item name="strokeColor">?attr/appCardStrokeColor</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerLow</item>
+    </style>
+
+    <style name="ActionTileCard" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">?attr/appTileRadius</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">?attr/appCardStrokeWidth</item>
+        <item name="strokeColor">?attr/appCardStrokeColor</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerLow</item>
+    </style>
+
+    <style name="RoundedCard16">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="PillCard">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Buttons -->
+    <style name="CircleButton" parent="Widget.Material3.Button.Icon">
+        <item name="cornerRadius">60dp</item>
+        <item name="android:textSize">0sp</item>
+    </style>
+
+    <!-- Dialogs -->
+    <style name="CustomAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowBackground">@drawable/material_alert</item>
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Preferences -->
+    <style name="App.Preference.Item" parent="Preference.Material">
+        <item name="android:layout">@layout/pref_item</item>
+    </style>
+
+    <style name="App.Preference.Category" parent="Preference.Category.Material">
+        <item name="android:layout">@layout/pref_category</item>
+    </style>
+
+    <style name="App.Preference.DialogPreference" parent="Preference.DialogPreference.Material">
+        <item name="android:layout">@layout/pref_item</item>
+    </style>
+
+    <style name="App.Preference.EditTextPreference" parent="Preference.DialogPreference.EditTextPreference.Material">
+        <item name="android:layout">@layout/pref_item</item>
+    </style>
+
+    <style name="App.Preference.CheckBoxPreference" parent="Preference.CheckBoxPreference.Material">
+        <item name="android:layout">@layout/pref_item</item>
+    </style>
+
+    <style name="App.Preference.SwitchPreference" parent="Preference.SwitchPreference.Material">
+        <item name="android:layout">@layout/pref_item</item>
+        <item name="android:widgetLayout">@layout/material_switch</item>
+    </style>
+
+    <style name="App.PreferenceFragment" parent="PreferenceFragment.Material">
+        <item name="android:divider">@null</item>
+        <item name="android:dividerHeight">0dp</item>
+    </style>
+
+    <style name="TextPrimary" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="TextSummary" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+</resources>

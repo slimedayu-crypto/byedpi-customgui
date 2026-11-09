@@ -63,7 +63,7 @@ object SettingsUtils {
         }
     }
 
-    private fun themeByName(name: String): Int? = when (name) {
+    private fun themeByName(name: String): Int? = AppStyles.nightMode(name) ?: when (name) {
         "system" -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         "light" -> AppCompatDelegate.MODE_NIGHT_NO
         "dark" -> AppCompatDelegate.MODE_NIGHT_YES

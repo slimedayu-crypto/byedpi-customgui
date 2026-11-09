@@ -1,13 +1,13 @@
 package io.github.romanvht.byedpi.activities
 
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.net.VpnService
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -18,16 +18,20 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.materialswitch.MaterialSwitch
 import io.github.romanvht.byedpi.R
 import io.github.romanvht.byedpi.adapters.StrategyResultAdapter
+import io.github.romanvht.byedpi.data.AppCheckStatus
 import io.github.romanvht.byedpi.data.AppStatus
 import io.github.romanvht.byedpi.data.Mode
 import io.github.romanvht.byedpi.data.StrategyResult
 import io.github.romanvht.byedpi.data.TestState
+import io.github.romanvht.byedpi.services.HealthMonitor
 import io.github.romanvht.byedpi.services.ServiceManager
 import io.github.romanvht.byedpi.services.TestService
 import io.github.romanvht.byedpi.services.appStatus
 import io.github.romanvht.byedpi.utility.HistoryUtils
+import io.github.romanvht.byedpi.utility.getCmdEnable
 import io.github.romanvht.byedpi.utility.getPreferences
 import io.github.romanvht.byedpi.utility.mode
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +42,8 @@ class TestActivity : BaseActivity() {
 
     private lateinit var strategiesRecyclerView: RecyclerView
     private lateinit var progressTextView: TextView
+    private lateinit var testProgressBar: ProgressBar
+    private lateinit var summaryTextView: TextView
     private lateinit var disclaimerTextView: TextView
     private lateinit var startStopButton: MaterialButton
     private lateinit var strategyAdapter: StrategyResultAdapter
@@ -53,11 +59,12 @@ class TestActivity : BaseActivity() {
         ServiceManager.refresh(this)
         setContentView(R.layout.activity_proxy_test)
         setupToolbar()
-
         cmdHistoryUtils = HistoryUtils(this)
         strategiesRecyclerView = findViewById(R.id.strategiesRecyclerView)
         startStopButton = findViewById(R.id.startStopButton)
         progressTextView = findViewById(R.id.progressTextView)
+        testProgressBar = findViewById(R.id.testProgressBar)
+        summaryTextView = findViewById(R.id.summaryTextView)
         disclaimerTextView = findViewById(R.id.disclaimerTextView)
 
         strategyAdapter = StrategyResultAdapter(this,
@@ -84,15 +91,6 @@ class TestActivity : BaseActivity() {
             if (isTesting) TestService.stop() else TestService.start(this)
 
             startStopButton.postDelayed({ startStopButton.isClickable = true }, 1000)
-        }
-
-        startStopButton.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                startStopButton.strokeWidth = 10
-                startStopButton.strokeColor = ColorStateList.valueOf(android.graphics.Color.argb(100, 0, 0, 0))
-            } else {
-                startStopButton.strokeWidth = 0
-            }
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -153,12 +151,45 @@ class TestActivity : BaseActivity() {
         disclaimerTextView.visibility = if (state.wasInterrupted || (!state.isRunning && state.strategies.isEmpty())) View.VISIBLE else View.GONE
         disclaimerTextView.text = getString(if (state.wasInterrupted) R.string.test_crash else R.string.test_disclaimer)
 
+        if (state.isRunning && state.strategies.isNotEmpty()) {
+            testProgressBar.visibility = View.VISIBLE
+            testProgressBar.max = state.strategies.size
+            testProgressBar.progress = state.currentStrategy
+        } else {
+            testProgressBar.visibility = View.GONE
+        }
+
+        val best = state.strategies
+            .filter { it.isCompleted && it.totalRequests > 0 }
+            .maxByOrNull { it.weightedPercentage }
+        summaryTextView.visibility = if (!state.isRunning && best != null) View.VISIBLE else View.GONE
+        if (best != null) {
+            summaryTextView.text = getString(
+                R.string.test_best_short,
+                best.successCount,
+                best.totalRequests,
+                best.weightedPercentage
+            ) + if (best.appList.isNotEmpty()) {
+                val appsOk = best.appList.count { it.status != AppCheckStatus.FAILED }
+                getString(R.string.test_best_apps, appsOk, best.appList.size)
+            } else {
+                ""
+            }
+        }
+
         strategyAdapter.setTestingState(state.isRunning)
         val replace = renderedRunId != state.runId || strategies.map { it.command } != state.strategies.map { it.command }
         val reorder = replace || strategies.indices.any { strategies[it].isCompleted != state.strategies[it].isCompleted }
         if (replace) {
             strategies.clear()
-            strategies.addAll(state.strategies.map { it.copy(siteResults = it.siteResults.toMutableList()) })
+            strategies.addAll(
+                state.strategies.map {
+                    it.copy(
+                        siteResults = it.siteResults.toMutableList(),
+                        appResults = it.appList.toMutableList(),
+                    )
+                }
+            )
             renderedRunId = state.runId
         } else {
             strategies.forEachIndexed { index, strategy ->
@@ -170,6 +201,9 @@ class TestActivity : BaseActivity() {
                     strategy.isCompleted = value.isCompleted
                     strategy.siteResults.clear()
                     strategy.siteResults.addAll(value.siteResults)
+                    strategy.appPoints = value.appPoints
+                    strategy.appMaxPoints = value.appMaxPoints
+                    strategy.appResults = value.appList.toMutableList()
                     if (!reorder) strategyAdapter.updateStrategy(strategy)
                 }
             }
@@ -217,6 +251,11 @@ class TestActivity : BaseActivity() {
 
             strategy.siteResults.forEach { site ->
                 sb.appendLine("${site.site} - ${site.successCount}/${site.totalCount}")
+            }
+
+            strategy.appList.forEach { app ->
+                sb.appendLine("${app.appName} (${app.packageName}) - ${app.status.name}" +
+                    if (app.status == AppCheckStatus.FAILED) "" else " · ${app.latencyMs} ms")
             }
 
             sb.appendLine("\n${strategy.successCount}/${strategy.totalRequests}")

@@ -138,11 +138,23 @@ class ByeDpiVpnService : VpnService() {
             }
 
             "whitelist" -> {
+                val added = mutableSetOf<String>()
                 for (packageName in configuration.apps) {
                     try {
                         builder.addAllowedApplication(packageName)
+                        added.add(packageName)
                     } catch (e: Exception) {
                         Log.e(TAG, "Не удалось добавить приложение $packageName в белый список", e)
+                    }
+                }
+
+                // No selection means ByeDPI processes every app. Our own package is
+                // excluded so the UI and the local proxy do not loop through the VPN.
+                if (added.isEmpty()) {
+                    try {
+                        builder.addDisallowedApplication(applicationContext.packageName)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Не удалось исключить пакет приложения из VPN", e)
                     }
                 }
             }

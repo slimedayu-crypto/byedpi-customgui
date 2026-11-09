@@ -11,7 +11,6 @@ class TestSettingsActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_test_settings)
         setupToolbar()
-
         if (savedInstanceState == null) {
             val openFragment = intent.getStringExtra("open_fragment")
 

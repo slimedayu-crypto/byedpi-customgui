@@ -31,7 +31,6 @@ class SettingsActivity : BaseActivity() {
 
         setContentView(R.layout.activity_settings)
         setupToolbar()
-
         if (savedInstanceState == null) {
             val openFragment = intent.getStringExtra("open_fragment")
 

@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
@@ -65,9 +66,15 @@ class SiteCheckUtils(
 
         val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress(proxyIp, proxyPort))
 
-        repeat(requestsCount) { attempt ->
+        // Single-shot tests get one extra chance on failure. Transient timeouts are the main
+        // source of unstable scores, while successful sites stay as fast as before.
+        val maxAttempts = if (requestsCount <= 1) 2 else requestsCount
+
+        repeat(maxAttempts) { attempt ->
             coroutineContext.ensureActive()
-            Log.i("SiteChecker", "Attempt ${attempt + 1}/$requestsCount for $site")
+            if (responseCount >= requestsCount) return@repeat
+            if (attempt > 0) delay(150)
+            Log.i("SiteChecker", "Attempt ${attempt + 1}/$maxAttempts for $site")
 
             var connection: HttpURLConnection? = null
             try {
@@ -76,6 +83,12 @@ class SiteCheckUtils(
                 connection.readTimeout = (timeout * 1000).toInt()
                 connection.instanceFollowRedirects = true
                 connection.setRequestProperty("Connection", "close")
+                connection.setRequestProperty("Accept-Encoding", "identity")
+                connection.setRequestProperty(
+                    "User-Agent",
+                    "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 " +
+                        "(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
+                )
 
                 val responseCode = connection.responseCode
                 val declaredLength = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
@@ -106,11 +119,17 @@ class SiteCheckUtils(
                     // Stream reading failed
                 }
 
-                if (declaredLength <= 0L || actualLength >= declaredLength) {
+                // A site counts as reachable when the server answered and the response body
+                // was not cut off. Empty bodies (chunked/204/redirect) are accepted, otherwise
+                // a broken tunnel could be mistaken for a successful request.
+                val bodyComplete = declaredLength <= 0L || actualLength >= declaredLength
+                val bodyPresent = actualLength > 0L || responseCode == 204 || responseCode in 300..399
+
+                if (bodyComplete && bodyPresent) {
                     Log.i("SiteChecker", "Response for $site: $responseCode, Declared: $declaredLength, Actual: $actualLength")
                     responseCount++
                 } else {
-                    Log.w("SiteChecker", "Block detected for $site, Declared: $declaredLength, Actual: $actualLength")
+                    Log.w("SiteChecker", "Block detected for $site, code: $responseCode, Declared: $declaredLength, Actual: $actualLength")
                 }
 
             } catch (e: CancellationException) {

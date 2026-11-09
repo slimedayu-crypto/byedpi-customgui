@@ -242,4 +242,9 @@
     <string name="file_picker_unavailable">Cihazda sistem dosya seçicisi yok. Devam etmek için uygulamaya dosya erişimi verin.</string>
     <string name="grant_access">Erişim ver</string>
     <string name="storage_access_not_granted">Dosya erişimi verilmedi</string>
+    <string name="main_quick_actions">Hızlı işlemler</string>
+    <string name="nav_home">Ana sayfa</string>
+    <string name="nav_strategies">Stratejiler</string>
+    <string name="nav_apps">Uygulamalar</string>
+    <string name="nav_settings">Ayarlar</string>
 </resources>

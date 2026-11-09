@@ -242,4 +242,9 @@
     <string name="file_picker_unavailable">Құрылғыда жүйелік файл таңдау құралы жоқ. Жалғастыру үшін қолданбаға файлдарға рұқсат беріңіз.</string>
     <string name="grant_access">Рұқсат беру</string>
     <string name="storage_access_not_granted">Файлдарға рұқсат берілмеді</string>
+    <string name="main_quick_actions">Жылдам әрекеттер</string>
+    <string name="nav_home">Басты бет</string>
+    <string name="nav_strategies">Стратегиялар</string>
+    <string name="nav_apps">Қолданбалар</string>
+    <string name="nav_settings">Параметрлер</string>
 </resources>

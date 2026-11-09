@@ -42,6 +42,21 @@ object DiagnosticUtils {
             appendLine(context.getString(R.string.diagnostic_app_settings))
             appendLine(value(context, R.string.diagnostic_command_line, state(context, cmdEnabled)))
             appendLine(value(context, R.string.diagnostic_strategy, strategy))
+            appendLine(value(context, R.string.auto_strategy_title, state(context, AutoTuneUtils.isEnabled(context))))
+            if (AutoTuneUtils.isEnabled(context)) {
+                val network = AutoTuneUtils.networkKey(context)
+                appendLine(value(context, R.string.diagnostic_network, network))
+                appendLine(value(
+                    context,
+                    R.string.auto_strategy_interval_title,
+                    "${AutoTuneUtils.intervalSec(context)}${context.getString(R.string.diagnostic_seconds)}"
+                ))
+                appendLine(value(
+                    context,
+                    R.string.auto_strategy_profiles_title,
+                    AutoTuneUtils.getProfile(context, network) ?: context.getString(R.string.diagnostic_none)
+                ))
+            }
             appendLine(value(context, R.string.mode_setting, modeName(context, mode)))
             appendLine(value(context, R.string.private_dns, privateDnsDescription(context, privateDnsState)))
             if (mode == Mode.VPN) {

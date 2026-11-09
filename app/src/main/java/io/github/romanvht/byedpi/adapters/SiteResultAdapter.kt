@@ -11,7 +11,9 @@ import io.github.romanvht.byedpi.data.SiteResult
 
 class SiteResultAdapter : RecyclerView.Adapter<SiteResultAdapter.SiteViewHolder>() {
 
-    private val sites = mutableListOf<SiteResult>()
+    private data class Row(val name: String, val value: String)
+
+    private val rows = mutableListOf<Row>()
 
     class SiteViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val siteTextView: TextView = view.findViewById(R.id.siteTextView)
@@ -23,21 +25,25 @@ class SiteResultAdapter : RecyclerView.Adapter<SiteResultAdapter.SiteViewHolder>
         return SiteViewHolder(view)
     }
 
-    @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: SiteViewHolder, position: Int) {
-        val site = sites[position]
-        holder.siteTextView.text = site.site
-        holder.resultTextView.text = "${site.successCount}/${site.totalCount}"
+        val row = rows[position]
+        holder.siteTextView.text = row.name
+        holder.resultTextView.text = row.value
     }
 
     override fun getItemCount(): Int {
-        return sites.size
+        return rows.size
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    fun updateSites(newSites: List<SiteResult>) {
-        sites.clear()
-        sites.addAll(newSites)
+    fun updateSites(
+        newSites: List<SiteResult>,
+        appRows: List<Pair<String, String>> = emptyList(),
+    ) {
+        rows.clear()
+        // Apps first: they matter more than sites when picking a strategy.
+        appRows.forEach { rows.add(Row(it.first, it.second)) }
+        newSites.forEach { rows.add(Row(it.site, "${it.successCount}/${it.totalCount}")) }
         notifyDataSetChanged()
     }
 }

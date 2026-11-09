@@ -286,5 +286,6 @@ object ServiceManager {
             it.sendBroadcast(Intent(action).setPackage(it.packageName).putExtra(SENDER, sender.ordinal))
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) QuickTileService.updateTile()
+        application?.let { HealthMonitor.onStatusChanged(it, status) }
     }
 }

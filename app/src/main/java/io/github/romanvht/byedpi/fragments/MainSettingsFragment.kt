@@ -3,33 +3,45 @@ package io.github.romanvht.byedpi.fragments
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.preference.*
 import io.github.romanvht.byedpi.R
 import io.github.romanvht.byedpi.BuildConfig
+import io.github.romanvht.byedpi.activities.AppFilterActivity
 import io.github.romanvht.byedpi.activities.TestActivity
 import io.github.romanvht.byedpi.data.Mode
 import io.github.romanvht.byedpi.data.PrivateDnsState
+import io.github.romanvht.byedpi.services.HealthMonitor
+import io.github.romanvht.byedpi.services.TestService
+import io.github.romanvht.byedpi.ui.SettingsHeaderPreference
+import io.github.romanvht.byedpi.ui.ThemePickerDialog
 import io.github.romanvht.byedpi.utility.*
 import androidx.core.net.toUri
 
 class MainSettingsFragment : PreferenceFragmentCompat() {
     companion object {
         private val TAG: String = MainSettingsFragment::class.java.simpleName
+        private val alwaysHiddenKeys = setOf("dns_ip", "applist_type", "app_theme", "settings_empty")
+        private val hiddenFromSearchKeys = setOf("dns_ip", "applist_type", "app_theme", "private_dns")
     }
 
     private val preferenceListener =
-        SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == AutoTuneUtils.KEY_ENABLED) HealthMonitor.refresh(requireContext())
             updatePreferences()
         }
+
+    private var searchQuery = ""
+    private val baseVisibility = mutableMapOf<String, Boolean>()
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.main_settings, rootKey)
 
         setEditTextPreferenceListener("byedpi_proxy_ip") { checkIp(it) }
         setEditTestPreferenceListenerPort("byedpi_proxy_port")
+        setEditTestPreferenceListenerInt("auto_strategy_interval", 15, 3600)
         setEditTextPreferenceListener("dns_ip") { it.isBlank() || checkNotLocalIp(it) }
 
         findPreferenceNotNull<ListPreference>("language")
@@ -41,6 +53,8 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
         findPreferenceNotNull<ListPreference>("app_theme")
             .setOnPreferenceChangeListener { _, newValue ->
                 SettingsUtils.setTheme(newValue as String)
+                // Re-create so the selected style overlay is applied right away
+                view?.post { activity?.recreate() }
                 true
             }
 
@@ -48,6 +62,33 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
             .setOnPreferenceClickListener {
                 val intent = Intent(context, TestActivity::class.java)
                 startActivity(intent)
+                true
+            }
+
+        findPreferenceNotNull<Preference>("selected_apps")
+            .setOnPreferenceClickListener {
+                startActivity(Intent(requireContext(), AppFilterActivity::class.java))
+                true
+            }
+
+        findPreferenceNotNull<Preference>("auto_strategy_reset")
+            .setOnPreferenceClickListener {
+                showResetAutoStrategyDialog()
+                true
+            }
+
+        findPreferenceNotNull<Preference>("auto_strategy_run_now")
+            .setOnPreferenceClickListener {
+                when {
+                    TestService.isRunning ->
+                        Toast.makeText(requireContext(), R.string.test_unavailable, Toast.LENGTH_SHORT).show()
+                    !requireContext().getPreferences().getCmdEnable() ->
+                        Toast.makeText(requireContext(), R.string.auto_strategy_run_now_need_cmd, Toast.LENGTH_LONG).show()
+                    else -> {
+                        TestService.startAuto(requireContext())
+                        Toast.makeText(requireContext(), R.string.auto_strategy_run_now_started, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 true
             }
 
@@ -89,6 +130,17 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
         findPreferenceNotNull<Preference>("version").summary = BuildConfig.VERSION_NAME
         findPreferenceNotNull<Preference>("byedpi_version").summary = "0.17.3 (ba53229)"
 
+        findPreferenceNotNull<SettingsHeaderPreference>("settings_header").apply {
+            themeName = themeDisplayName()
+            animationsOn = requireContext().getPreferences()
+                .getBoolean(ThemeFx.KEY_ANIMATIONS, true)
+            onThemeClick = { showThemePicker() }
+            onQueryChanged = { query ->
+                searchQuery = query
+                if (query.isBlank()) updatePreferences() else applySearchFilter()
+            }
+        }
+
         updatePreferences()
     }
 
@@ -104,6 +156,14 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun updatePreferences() {
+        resetSearchVisibility()
+
+        findPreference<SettingsHeaderPreference>("settings_header")?.apply {
+            themeName = themeDisplayName()
+            animationsOn = requireContext().getPreferences()
+                .getBoolean(ThemeFx.KEY_ANIMATIONS, true)
+        }
+
         val cmdEnable = findPreferenceNotNull<SwitchPreference>("byedpi_enable_cmd_settings").isChecked
         val mode = findPreferenceNotNull<ListPreference>("byedpi_mode").value.let { Mode.fromString(it) }
         val dns = findPreferenceNotNull<Preference>("dns_ip_picker")
@@ -121,6 +181,10 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
         val uiSettings = findPreferenceNotNull<Preference>("byedpi_ui_settings")
         val cmdSettings = findPreferenceNotNull<Preference>("byedpi_cmd_settings")
         val proxyTest = findPreferenceNotNull<Preference>("proxy_test")
+        val autoStrategyReset = findPreferenceNotNull<Preference>("auto_strategy_reset")
+
+        autoStrategyReset.summary =
+            getString(R.string.auto_strategy_reset_summary, AutoTuneUtils.profileCount(requireContext()))
 
         if (cmdEnable) {
             val (cmdIp, cmdPort) = sharedPreferences?.checkIpAndPortInCmd() ?: Pair(null, null)
@@ -143,20 +207,19 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
                 dns.isVisible = privateDnsState !is PrivateDnsState.Configured
                 ipv6.isVisible = true
 
-                when (applistType.value) {
-                    "disable" -> {
-                        applistType.isVisible = true
-                        selectedApps.isVisible = false
-                    }
-                    "blacklist", "whitelist" -> {
-                        applistType.isVisible = true
-                        selectedApps.isVisible = true
-                    }
-                    else -> {
-                        applistType.isVisible = true
-                        selectedApps.isVisible = false
-                        Log.w(TAG, "Unexpected applistType value: ${applistType.value}")
-                    }
+                val type = applistType.value
+                val selectedCount = sharedPreferences?.getSelectedApps()?.size ?: 0
+
+                // The mode is selected on the app filter screen, keep this technical
+                // preference hidden to avoid duplicating the control.
+                applistType.isVisible = false
+                selectedApps.isVisible = true
+                selectedApps.summary = when {
+                    type == "whitelist" ->
+                        getString(R.string.app_filter_summary_whitelist, selectedCount)
+                    type == "blacklist" && selectedCount > 0 ->
+                        getString(R.string.app_filter_summary_blacklist, selectedCount)
+                    else -> getString(R.string.app_filter_summary_all)
                 }
             }
 
@@ -179,6 +242,91 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
         } else {
             storageAccess.summary = getString(R.string.storage_access_summary)
         }
+
+        snapshotVisibility()
+        applySearchFilter()
+    }
+
+    /** Restores every row before functional visibility rules run again, so clearing the search does not leave gaps. */
+    private fun childPreferences(group: PreferenceGroup): List<Preference> =
+        (0 until group.preferenceCount).map { group.getPreference(it) }
+
+    private fun resetSearchVisibility() {
+        childPreferences(preferenceScreen).forEach { preference ->
+            if (preference is PreferenceCategory) {
+                preference.isVisible = true
+                childPreferences(preference).forEach { child ->
+                    val key = child.key ?: return@forEach
+                    if (key !in alwaysHiddenKeys) child.isVisible = true
+                }
+            } else {
+                val key = preference.key ?: return@forEach
+                if (key !in alwaysHiddenKeys && key != "settings_header" && key != "settings_empty") {
+                    preference.isVisible = true
+                }
+            }
+        }
+    }
+
+    private fun snapshotVisibility() {
+        baseVisibility.clear()
+        childPreferences(preferenceScreen).forEach { preference ->
+            preference.key?.let { baseVisibility[it] = preference.isVisible }
+            if (preference is PreferenceCategory) {
+                childPreferences(preference).forEach { child ->
+                    child.key?.let { baseVisibility[it] = child.isVisible }
+                }
+            }
+        }
+    }
+
+    private fun applySearchFilter() {
+        val empty = findPreference<Preference>("settings_empty")
+        if (searchQuery.isBlank()) {
+            empty?.isVisible = false
+            return
+        }
+
+        val query = searchQuery.trim().lowercase()
+        var anyVisible = false
+
+        for (preference in childPreferences(preferenceScreen)) {
+            if (preference !is PreferenceCategory) continue
+            var categoryVisible = false
+            for (child in childPreferences(preference)) {
+                val key = child.key ?: continue
+                val base = baseVisibility[key] ?: child.isVisible
+                val matched = base && matchesQuery(child, query)
+                child.isVisible = matched
+                if (matched) categoryVisible = true
+            }
+            preference.isVisible = categoryVisible
+            if (categoryVisible) anyVisible = true
+        }
+
+        empty?.isVisible = !anyVisible
+    }
+
+    private fun matchesQuery(preference: Preference, query: String): Boolean {
+        if (preference.key in hiddenFromSearchKeys) return false
+        val title = preference.title?.toString()?.lowercase().orEmpty()
+        val summary = preference.summary?.toString()?.lowercase().orEmpty()
+        return title.contains(query) || summary.contains(query)
+    }
+
+    private fun themeDisplayName(): String {
+        val current = ThemePickerDialog.currentTheme(requireContext())
+        val names = resources.getStringArray(R.array.themes_short)
+        val values = resources.getStringArray(R.array.themes_entries)
+        val index = values.indexOf(current)
+        return if (index >= 0) names[index] else getString(R.string.theme_tab_system)
+    }
+
+    private fun showThemePicker() {
+        ThemePickerDialog(this, ThemePickerDialog.currentTheme(requireContext())) {
+            SettingsUtils.setTheme(it)
+            view?.post { activity?.recreate() }
+        }.show()
     }
 
     private val dnsPresets: List<Pair<String, String>>
@@ -211,6 +359,19 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
                 } else {
                     onDisplayPreferenceDialog(dnsPref)
                 }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showResetAutoStrategyDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.auto_strategy_reset_title)
+            .setMessage(R.string.auto_strategy_reset_confirm)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                AutoTuneUtils.clearProfiles(requireContext())
+                updatePreferences()
+                Toast.makeText(requireContext(), R.string.auto_strategy_reset_done, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

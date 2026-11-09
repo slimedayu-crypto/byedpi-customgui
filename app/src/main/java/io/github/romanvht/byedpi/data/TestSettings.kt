@@ -9,4 +9,6 @@ data class TestSettings(
     val requestsCount: Int,
     val requestTimeout: Long,
     val requestLimit: Int,
+    /** Whitelisted apps that must be checked through each candidate strategy. */
+    val appPackages: List<String> = emptyList(),
 )

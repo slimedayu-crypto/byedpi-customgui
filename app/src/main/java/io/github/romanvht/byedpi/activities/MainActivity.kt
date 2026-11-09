@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -27,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import io.github.romanvht.byedpi.R
 import io.github.romanvht.byedpi.data.*
 import io.github.romanvht.byedpi.databinding.ActivityMainBinding
+import io.github.romanvht.byedpi.services.HealthMonitor
 import io.github.romanvht.byedpi.services.ServiceManager
 import io.github.romanvht.byedpi.services.TestService
 import io.github.romanvht.byedpi.services.appStatus
@@ -39,6 +42,16 @@ import kotlin.system.exitProcess
 class MainActivity : BaseActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var historyUtils: HistoryUtils
+    private var updatingAutoSwitch = false
+
+    private val preferenceListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                "byedpi_cmd_args" -> updateStrategyButton()
+                "applist_type", "selected_apps" -> updateAppFilterCard()
+                AutoTuneUtils.KEY_ENABLED -> updateAutoStrategyCard()
+            }
+        }
 
     companion object {
         private val TAG: String = MainActivity::class.java.simpleName
@@ -179,15 +192,6 @@ class MainActivity : BaseActivity() {
             }, 1000)
         }
 
-        binding.statusButtonCard.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                binding.statusButtonCard.strokeWidth = 10
-                binding.statusButtonCard.strokeColor = android.graphics.Color.argb(100, 0, 0, 0)
-            } else {
-                binding.statusButtonCard.strokeWidth = 0
-            }
-        }
-
         binding.settingsButton.setOnClickListener {
             if (TestService.isRunning) {
                 Toast.makeText(this, R.string.test_unavailable, Toast.LENGTH_SHORT).show()
@@ -226,8 +230,22 @@ class MainActivity : BaseActivity() {
             startActivity(intent)
         }
 
+        binding.appFilterCard.setOnClickListener {
+            startActivity(Intent(this, AppFilterActivity::class.java))
+        }
+
         binding.strategyButton.setOnClickListener {
             showStrategyPicker()
+        }
+
+        binding.autoStrategySwitch.setOnCheckedChangeListener { _, checked ->
+            if (updatingAutoSwitch) return@setOnCheckedChangeListener
+            val prefs = getPreferences()
+            if (prefs.getBoolean(AutoTuneUtils.KEY_ENABLED, false) != checked) {
+                prefs.edit { putBoolean(AutoTuneUtils.KEY_ENABLED, checked) }
+                HealthMonitor.refresh(this)
+            }
+            updateAutoStrategyCard()
         }
 
         if (!PermissionUtils.hasNotificationPermission(this)) {
@@ -247,8 +265,15 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         ServiceManager.refresh(this)
+        getPreferences().registerOnSharedPreferenceChangeListener(preferenceListener)
         updateStatus()
         updateStrategyButton()
+        updateAppFilterCard()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        getPreferences().unregisterOnSharedPreferenceChangeListener(preferenceListener)
     }
 
     override fun onDestroy() {
@@ -378,10 +403,11 @@ class MainActivity : BaseActivity() {
 
         when (status) {
             AppStatus.Halted -> {
-                val typedValue = android.util.TypedValue()
-                theme.resolveAttribute(android.R.attr.colorPrimary, typedValue,true)
-                binding.statusButtonCard.setCardBackgroundColor(typedValue.data)
-                binding.statusButtonIcon.clearColorFilter()
+                val primary = resolveThemeColor(androidx.appcompat.R.attr.colorPrimary)
+                val onPrimary = resolveThemeColor(com.google.android.material.R.attr.colorOnPrimary)
+                binding.statusButtonCard.setCardBackgroundColor(primary)
+                binding.statusButtonCard.strokeColor = primary
+                binding.statusButtonIcon.imageTintList = ColorStateList.valueOf(onPrimary)
 
                 when (preferences.mode()) {
                     Mode.VPN -> {
@@ -395,8 +421,12 @@ class MainActivity : BaseActivity() {
             }
 
             AppStatus.Running -> {
-                binding.statusButtonCard.setCardBackgroundColor(ContextCompat.getColor(this, R.color.green_active))
-                binding.statusButtonIcon.setColorFilter(ContextCompat.getColor(this, android.R.color.white))
+                val green = resolveThemeColor(R.attr.appActiveColor)
+                binding.statusButtonCard.setCardBackgroundColor(green)
+                binding.statusButtonCard.strokeColor = green
+                binding.statusButtonIcon.imageTintList = ColorStateList.valueOf(
+                    resolveThemeColor(R.attr.appOnActiveColor)
+                )
 
                 when (mode) {
                     Mode.VPN -> {
@@ -409,6 +439,52 @@ class MainActivity : BaseActivity() {
                 }
             }
         }
+
+        ThemeFx.status(binding.statusButtonCard, binding.statusButtonIcon, status == AppStatus.Running)
+        updateAutoStrategyCard()
+    }
+
+    private fun resolveThemeColor(attr: Int): Int {
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
+    }
+
+    private fun updateAppFilterCard() {
+        val preferences = getPreferences()
+        val type = preferences.getStringNotNull("applist_type", "blacklist")
+        val count = preferences.getSelectedApps().size
+
+        binding.appFilterSummary.text = when {
+            type == "whitelist" -> getString(R.string.app_filter_summary_whitelist, count)
+            type == "blacklist" && count > 0 ->
+                getString(R.string.app_filter_summary_blacklist, count)
+            else -> getString(R.string.app_filter_summary_all)
+        }
+    }
+
+    private fun updateAutoStrategyCard() {
+        if (!getPreferences().getCmdEnable()) {
+            binding.autoStrategyCard.visibility = View.GONE
+            return
+        }
+
+        binding.autoStrategyCard.visibility = View.VISIBLE
+        val enabled = AutoTuneUtils.isEnabled(this)
+        updatingAutoSwitch = true
+        binding.autoStrategySwitch.isChecked = enabled
+        updatingAutoSwitch = false
+
+        val network = AutoTuneUtils.networkLabel(this)
+        val running = appStatus.first == AppStatus.Running
+        val hasProfile = AutoTuneUtils.getProfile(this, AutoTuneUtils.networkKey(this)) != null
+
+        binding.autoStrategySummary.text = when {
+            !enabled -> getString(R.string.auto_strategy_off_summary)
+            !running -> getString(R.string.auto_strategy_waiting_summary, network)
+            hasProfile -> getString(R.string.auto_strategy_on_saved_summary, network)
+            else -> getString(R.string.auto_strategy_on_summary, network)
+        }
     }
 
     private fun updateStrategyButton() {
@@ -417,10 +493,12 @@ class MainActivity : BaseActivity() {
         if (!useCmdSettings) {
             binding.cmdButtonsRow.visibility = View.GONE
             binding.strategyButton.visibility = View.GONE
+            binding.autoStrategyCard.visibility = View.GONE
             return
         }
 
         binding.cmdButtonsRow.visibility = View.VISIBLE
+        updateAutoStrategyCard()
 
         val pinned = historyUtils.getPinnedHistory()
         val currentCmdArgs = getPreferences().getCmdArgs()

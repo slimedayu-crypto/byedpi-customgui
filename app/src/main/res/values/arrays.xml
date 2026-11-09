@@ -21,11 +21,53 @@
         <item name="system">Системная</item>
         <item name="light">Светлая</item>
         <item name="dark">Темная</item>
+    
+        <item name="minimal">Минимал</item>
+        <item name="terminal">Терминал</item>
+        <item name="bento">Светлый bento</item>
+        <item name="aurora">Аврора (стекло)</item>
+        <item name="brutal">Необрутализм</item>
+        <item name="soft">Мягкий неоморфизм</item>
+        <item name="gauge">Приборная панель</item>
+    
+        <item name="dotmatrix">Dot-matrix</item>
+        <item name="flow">Течение</item>
+        <item name="orbit">Орбита</item>
+        <item name="stamp">Штамп</item>
+        <item name="metro">Метро</item>
+        <item name="tuner">Тюнер</item>
+        <item name="bricks">Кирпичики</item>
+        <item name="pixel">Пиксель</item>
+        <item name="doge">Вау-обход</item>
+        <item name="win98">Ошибка 98</item>
+        <item name="impact">Impact-мем</item>
+        <item name="sigma">Сигма-режим</item>
     </array>
     <array name="themes_entries">
         <item name="system">system</item>
         <item name="light">light</item>
         <item name="dark">dark</item>
+    
+        <item name="minimal">minimal</item>
+        <item name="terminal">terminal</item>
+        <item name="bento">bento</item>
+        <item name="aurora">aurora</item>
+        <item name="brutal">brutal</item>
+        <item name="soft">soft</item>
+        <item name="gauge">gauge</item>
+    
+        <item name="dotmatrix">dotmatrix</item>
+        <item name="flow">flow</item>
+        <item name="orbit">orbit</item>
+        <item name="stamp">stamp</item>
+        <item name="metro">metro</item>
+        <item name="tuner">tuner</item>
+        <item name="bricks">bricks</item>
+        <item name="pixel">pixel</item>
+        <item name="doge">doge</item>
+        <item name="win98">win98</item>
+        <item name="impact">impact</item>
+        <item name="sigma">sigma</item>
     </array>
 
     <array name="byedpi_modes">

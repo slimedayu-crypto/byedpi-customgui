@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Short labels for the style grid so three columns fit without truncation. -->
+    <string-array name="themes_short">
+        <item>Системная</item>
+        <item>Светлая</item>
+        <item>Тёмная</item>
+        <item>Минимал</item>
+        <item>Терминал</item>
+        <item>Бенто</item>
+        <item>Аврора</item>
+        <item>Брутал</item>
+        <item>Мягкий</item>
+        <item>Прибор</item>
+        <item>Dot-matrix</item>
+        <item>Течение</item>
+        <item>Орбита</item>
+        <item>Штамп</item>
+        <item>Метро</item>
+        <item>Тюнер</item>
+        <item>Кирпичики</item>
+        <item>Пиксель</item>
+        <item>Вау-обход</item>
+        <item>Ошибка 98</item>
+        <item>Impact</item>
+        <item>Сигма</item>
+    </string-array>
+</resources>
