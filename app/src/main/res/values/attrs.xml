@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="appHeroRadius" format="dimension" />
+    <attr name="appTileRadius" format="dimension" />
+    <attr name="appButtonRadius" format="dimension" />
+    <attr name="appCardStrokeWidth" format="dimension" />
+    <attr name="appCardStrokeColor" format="color" />
+    <attr name="appActiveColor" format="color" />
+    <attr name="appOnActiveColor" format="color" />
+    <attr name="appPatternOverlay" format="reference" />
+</resources>

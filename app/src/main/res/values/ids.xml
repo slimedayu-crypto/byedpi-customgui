@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="fx_idle" type="id" />
+    <item name="fx_state" type="id" />
+    <item name="fx_tap" type="id" />
+</resources>

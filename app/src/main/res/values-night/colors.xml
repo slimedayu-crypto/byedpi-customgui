@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_color">#AAC7FF</color>
+    <color name="green_active">#6EDB8F</color>
+    <color name="green_on">#00391B</color>
+    <color name="score_good">#7BE495</color>
+    <color name="score_ok">#FFD54F</color>
+    <color name="score_bad">#FF8A80</color>
+    <color name="score_good_bg">#337BE495</color>
+    <color name="score_ok_bg">#33FFD54F</color>
+    <color name="score_bad_bg">#33FF8A80</color>
+    <color name="progress_track">#33FFFFFF</color>
+</resources>

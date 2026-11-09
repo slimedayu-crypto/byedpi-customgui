@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "// tools": "Встроенные инструменты: lsp/webfetch/websearch/patch включены по умолчанию; ниже — явные настройки",
+  "lsp": true,
+  "websearch": {
+    "provider": "random"
+  },
+
+  "mcp": {
+    "servers": {
+      "composio": {
+        "type": "remote",
+        "url": "https://connect.composio.dev/mcp"
+      },
+      "screenshot-to-code": {
+        "type": "local",
+        "command": ["npx", "-y", "screenshot-to-code-mcp"],
+        "environment": {
+          "S2C_LICENSE_KEY": "{env:S2C_LICENSE_KEY}"
+        }
+      }
+    }
+  },
+
+  "plugins": [
+    "opencode-session-history@0.1.5"
+  ]
+}

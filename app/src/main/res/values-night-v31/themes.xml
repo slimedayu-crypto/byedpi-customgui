@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ByeDPI" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorControlHighlight">?attr/colorSecondaryContainer</item>
+
+        <item name="alertDialogTheme">@style/CustomAlertDialog</item>
+
+        <item name="android:textAppearanceListItem">@style/TextPrimary</item>
+        <item name="android:textAppearanceListItemSecondary">@style/TextSummary</item>
+        <item name="android:textAppearanceListItemSmall">@style/TextSummary</item>
+
+        <item name="switchPreferenceStyle">@style/App.Preference.SwitchPreference</item>
+        <item name="materialCardViewStyle">@style/SmallShadowCard</item>
+
+        <!-- Style knobs (overridden by ThemeOverlay.ByeDPI.* styles) -->
+        <item name="appHeroRadius">36dp</item>
+        <item name="appTileRadius">24dp</item>
+        <item name="appButtonRadius">26dp</item>
+        <item name="appCardStrokeWidth">0dp</item>
+        <item name="appCardStrokeColor">@android:color/transparent</item>
+
+        <item name="appActiveColor">@color/green_active</item>
+        <item name="appOnActiveColor">@color/green_on</item>
+        <item name="appPatternOverlay">@android:color/transparent</item>
+        <item name="preferenceStyle">@style/App.Preference.Item</item>
+        <item name="preferenceCategoryStyle">@style/App.Preference.Category</item>
+        <item name="dialogPreferenceStyle">@style/App.Preference.DialogPreference</item>
+        <item name="editTextPreferenceStyle">@style/App.Preference.EditTextPreference</item>
+        <item name="checkBoxPreferenceStyle">@style/App.Preference.CheckBoxPreference</item>
+        <item name="preferenceFragmentCompatStyle">@style/App.PreferenceFragment</item>
+    </style>
+</resources>

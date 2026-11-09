@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="languages">
+        <item name="system">Автоматты</item>
+        <item name="ru">Орыс</item>
+        <item name="en">Ағылшын</item>
+        <item name="tr">Türkçe</item>
+        <item name="kk">Қазақша</item>
+        <item name="vi">Tiếng Việt</item>
+    </array>
+
+    <array name="themes">
+        <item name="system">Жүйе</item>
+        <item name="light">Жарық</item>
+        <item name="dark">Қараңғы</item>
+    
+        <item name="minimal">Minimal</item>
+        <item name="terminal">Terminal</item>
+        <item name="bento">Light bento</item>
+        <item name="aurora">Aurora (glass)</item>
+        <item name="brutal">Neo-brutalism</item>
+        <item name="soft">Soft neumorphism</item>
+        <item name="gauge">Gauge dashboard</item>
+    
+        <item name="dotmatrix">Dot-matrix</item>
+        <item name="flow">Flow</item>
+        <item name="orbit">Orbit</item>
+        <item name="stamp">Stamp</item>
+        <item name="metro">Metro</item>
+        <item name="tuner">Tuner</item>
+        <item name="bricks">Bricks</item>
+        <item name="pixel">Pixel</item>
+        <item name="doge">Wow-bypass</item>
+        <item name="win98">Error 98</item>
+        <item name="impact">Impact meme</item>
+        <item name="sigma">Sigma mode</item>
+    </array>
+
+    <array name="byedpi_hosts_modes">
+        <item name="disable">Өшіру</item>
+        <item name="blacklist">Қара тізім</item>
+        <item name="whitelist">Ақ тізім</item>
+    </array>
+
+    <array name="applist_types">
+        <item name="disable">Өшіру</item>
+        <item name="blacklist">Қара тізім</item>
+        <item name="whitelist">Ақ тізім</item>
+    </array>
+</resources>

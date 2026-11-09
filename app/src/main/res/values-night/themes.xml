@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ByeDPI" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Brand palette (dark) -->
+        <item name="colorPrimary">#BCC2FF</item>
+        <item name="colorOnPrimary">#1B2678</item>
+        <item name="colorPrimaryContainer">#3743A5</item>
+        <item name="colorOnPrimaryContainer">#DFE1FF</item>
+
+        <item name="colorSecondary">#C4C5DD</item>
+        <item name="colorOnSecondary">#2D2F42</item>
+        <item name="colorSecondaryContainer">#434559</item>
+        <item name="colorOnSecondaryContainer">#E0E1F9</item>
+
+        <item name="colorTertiary">#E6BAD6</item>
+        <item name="colorOnTertiary">#44263A</item>
+        <item name="colorTertiaryContainer">#5D3C51</item>
+        <item name="colorOnTertiaryContainer">#FFD8ED</item>
+
+        <item name="colorError">#FFB4AB</item>
+        <item name="colorOnError">#690005</item>
+        <item name="colorErrorContainer">#93000A</item>
+        <item name="colorOnErrorContainer">#FFDAD6</item>
+
+        <item name="android:colorBackground">#131318</item>
+        <item name="colorOnBackground">#E4E1E9</item>
+        <item name="colorSurface">#131318</item>
+        <item name="colorOnSurface">#E4E1E9</item>
+        <item name="colorSurfaceVariant">#46464F</item>
+        <item name="colorOnSurfaceVariant">#C7C5D0</item>
+        <item name="colorOutline">#90909A</item>
+        <item name="colorOutlineVariant">#46464F</item>
+        <item name="colorSurfaceContainerLowest">#0E0E13</item>
+        <item name="colorSurfaceContainerLow">#1B1B21</item>
+        <item name="colorSurfaceContainer">#1F1F25</item>
+        <item name="colorSurfaceContainerHigh">#292930</item>
+        <item name="colorSurfaceContainerHighest">#34343B</item>
+
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorControlHighlight">?attr/colorSecondaryContainer</item>
+
+        <item name="alertDialogTheme">@style/CustomAlertDialog</item>
+
+        <item name="android:textAppearanceListItem">@style/TextPrimary</item>
+        <item name="android:textAppearanceListItemSecondary">@style/TextSummary</item>
+        <item name="android:textAppearanceListItemSmall">@style/TextSummary</item>
+
+        <item name="switchPreferenceStyle">@style/App.Preference.SwitchPreference</item>
+        <item name="materialCardViewStyle">@style/SmallShadowCard</item>
+
+        <!-- Style knobs (overridden by ThemeOverlay.ByeDPI.* styles) -->
+        <item name="appHeroRadius">36dp</item>
+        <item name="appTileRadius">24dp</item>
+        <item name="appButtonRadius">26dp</item>
+        <item name="appCardStrokeWidth">0dp</item>
+        <item name="appCardStrokeColor">@android:color/transparent</item>
+
+        <item name="appActiveColor">@color/green_active</item>
+        <item name="appOnActiveColor">@color/green_on</item>
+        <item name="appPatternOverlay">@android:color/transparent</item>
+        <item name="preferenceStyle">@style/App.Preference.Item</item>
+        <item name="preferenceCategoryStyle">@style/App.Preference.Category</item>
+        <item name="dialogPreferenceStyle">@style/App.Preference.DialogPreference</item>
+        <item name="editTextPreferenceStyle">@style/App.Preference.EditTextPreference</item>
+        <item name="checkBoxPreferenceStyle">@style/App.Preference.CheckBoxPreference</item>
+        <item name="preferenceFragmentCompatStyle">@style/App.PreferenceFragment</item>
+    </style>
+</resources>
