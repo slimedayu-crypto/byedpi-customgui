@@ -12,8 +12,8 @@ object DomainListUtils {
     private val gson = Gson()
 
     private fun getDefaultActiveIds(lang: String): Set<String> = when (lang) {
-        "tr" -> setOf("türkiye", "discord")
-        else -> setOf("youtube", "googlevideo")
+        "tr" -> setOf("türkiye", "discord", "tiktok")
+        else -> setOf("youtube", "googlevideo", "tiktok")
     }
 
     fun syncLists(context: Context) {

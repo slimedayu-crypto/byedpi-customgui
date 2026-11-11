@@ -127,6 +127,23 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
                 true
             }
 
+        findPreference<Preference>("license")?.setOnPreferenceClickListener {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.license_title)
+                .setMessage(R.string.license_message)
+                .setPositiveButton(R.string.license_open) { _, _ ->
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            "https://www.gnu.org/licenses/gpl-3.0.html".toUri()
+                        )
+                    )
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            true
+        }
+
         findPreferenceNotNull<Preference>("version").summary = BuildConfig.VERSION_NAME
         findPreferenceNotNull<Preference>("byedpi_version").summary = "0.17.3 (ba53229)"
 

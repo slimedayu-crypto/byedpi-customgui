@@ -334,4 +334,8 @@
     <string name="theme_animations_summary">Появление, нажатия, кнопка питания</string>
     <string name="autostart_summary_short">При включении устройства</string>
     <string name="autoconnect_summary_short">При открытии приложения</string>
+    <string name="license_title">Лицензия</string>
+    <string name="license_summary">GNU General Public License v3.0</string>
+    <string name="license_message">ByeDPI Android распространяется по лицензии GNU GPL v3.0: код можно использовать, изменять и распространять на тех же условиях.</string>
+    <string name="license_open">Открыть лицензию</string>
 </resources>

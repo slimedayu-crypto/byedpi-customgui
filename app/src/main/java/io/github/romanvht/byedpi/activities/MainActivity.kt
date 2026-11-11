@@ -42,14 +42,11 @@ import kotlin.system.exitProcess
 class MainActivity : BaseActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var historyUtils: HistoryUtils
-    private var updatingAutoSwitch = false
 
     private val preferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 "byedpi_cmd_args" -> updateStrategyButton()
-                "applist_type", "selected_apps" -> updateAppFilterCard()
-                AutoTuneUtils.KEY_ENABLED -> updateAutoStrategyCard()
             }
         }
 
@@ -192,60 +189,8 @@ class MainActivity : BaseActivity() {
             }, 1000)
         }
 
-        binding.settingsButton.setOnClickListener {
-            if (TestService.isRunning) {
-                Toast.makeText(this, R.string.test_unavailable, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (appStatus.first == AppStatus.Running) {
-                Toast.makeText(this, R.string.settings_unavailable, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-        }
-
-        binding.editorButton.setOnClickListener {
-            val useCmdSettings = getPreferences().getCmdEnable()
-
-            if (!useCmdSettings && appStatus.first == AppStatus.Running) {
-                Toast.makeText(this, R.string.settings_unavailable, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            val intent = Intent(this, SettingsActivity::class.java)
-            intent.putExtra("open_fragment", if (useCmdSettings) "cmd" else "ui")
-            startActivity(intent)
-        }
-
-        binding.testProxyButton.setOnClickListener {
-            startActivity(Intent(this, TestActivity::class.java))
-        }
-
-        binding.domainListsButton.setOnClickListener {
-            val intent = Intent(this, TestSettingsActivity::class.java)
-            intent.putExtra("open_fragment", "domain_lists")
-            startActivity(intent)
-        }
-
-        binding.appFilterCard.setOnClickListener {
-            startActivity(Intent(this, AppFilterActivity::class.java))
-        }
-
         binding.strategyButton.setOnClickListener {
             showStrategyPicker()
-        }
-
-        binding.autoStrategySwitch.setOnCheckedChangeListener { _, checked ->
-            if (updatingAutoSwitch) return@setOnCheckedChangeListener
-            val prefs = getPreferences()
-            if (prefs.getBoolean(AutoTuneUtils.KEY_ENABLED, false) != checked) {
-                prefs.edit { putBoolean(AutoTuneUtils.KEY_ENABLED, checked) }
-                HealthMonitor.refresh(this)
-            }
-            updateAutoStrategyCard()
         }
 
         if (!PermissionUtils.hasNotificationPermission(this)) {
@@ -268,7 +213,6 @@ class MainActivity : BaseActivity() {
         getPreferences().registerOnSharedPreferenceChangeListener(preferenceListener)
         updateStatus()
         updateStrategyButton()
-        updateAppFilterCard()
     }
 
     override fun onPause() {
@@ -397,9 +341,6 @@ class MainActivity : BaseActivity() {
         Log.i(TAG, "Updating status: $status, $mode")
 
         val preferences = getPreferences()
-        val (ip, port) = preferences.getProxyIpAndPort()
-
-        binding.proxyAddress.text = getString(R.string.proxy_address, ip, port)
 
         when (status) {
             AppStatus.Halted -> {
@@ -441,7 +382,6 @@ class MainActivity : BaseActivity() {
         }
 
         ThemeFx.status(binding.statusButtonCard, binding.statusButtonIcon, status == AppStatus.Running)
-        updateAutoStrategyCard()
     }
 
     private fun resolveThemeColor(attr: Int): Int {
@@ -450,56 +390,7 @@ class MainActivity : BaseActivity() {
         return typedValue.data
     }
 
-    private fun updateAppFilterCard() {
-        val preferences = getPreferences()
-        val type = preferences.getStringNotNull("applist_type", "blacklist")
-        val count = preferences.getSelectedApps().size
-
-        binding.appFilterSummary.text = when {
-            type == "whitelist" -> getString(R.string.app_filter_summary_whitelist, count)
-            type == "blacklist" && count > 0 ->
-                getString(R.string.app_filter_summary_blacklist, count)
-            else -> getString(R.string.app_filter_summary_all)
-        }
-    }
-
-    private fun updateAutoStrategyCard() {
-        if (!getPreferences().getCmdEnable()) {
-            binding.autoStrategyCard.visibility = View.GONE
-            return
-        }
-
-        binding.autoStrategyCard.visibility = View.VISIBLE
-        val enabled = AutoTuneUtils.isEnabled(this)
-        updatingAutoSwitch = true
-        binding.autoStrategySwitch.isChecked = enabled
-        updatingAutoSwitch = false
-
-        val network = AutoTuneUtils.networkLabel(this)
-        val running = appStatus.first == AppStatus.Running
-        val hasProfile = AutoTuneUtils.getProfile(this, AutoTuneUtils.networkKey(this)) != null
-
-        binding.autoStrategySummary.text = when {
-            !enabled -> getString(R.string.auto_strategy_off_summary)
-            !running -> getString(R.string.auto_strategy_waiting_summary, network)
-            hasProfile -> getString(R.string.auto_strategy_on_saved_summary, network)
-            else -> getString(R.string.auto_strategy_on_summary, network)
-        }
-    }
-
     private fun updateStrategyButton() {
-        val useCmdSettings = getPreferences().getCmdEnable()
-
-        if (!useCmdSettings) {
-            binding.cmdButtonsRow.visibility = View.GONE
-            binding.strategyButton.visibility = View.GONE
-            binding.autoStrategyCard.visibility = View.GONE
-            return
-        }
-
-        binding.cmdButtonsRow.visibility = View.VISIBLE
-        updateAutoStrategyCard()
-
         val pinned = historyUtils.getPinnedHistory()
         val currentCmdArgs = getPreferences().getCmdArgs()
 

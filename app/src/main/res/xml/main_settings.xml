@@ -241,6 +241,12 @@
         </Preference>
 
         <Preference
+            android:key="license"
+            android:icon="@drawable/ic_info"
+            android:title="@string/license_title"
+            android:summary="@string/license_summary" />
+
+        <Preference
             android:key="version"
             android:icon="@drawable/ic_info"
             android:title="@string/version"

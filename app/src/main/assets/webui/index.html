@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<link rel="stylesheet" href="styles.css">
+<title>ByeByeDPI</title>
+</head>
+<body class="theme-system">
+<div id="app">
+  <div class="backdrop" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <span class="brand" id="brand">BYEBYEDPI</span>
+    <button class="icon-btn" id="btnSettings" aria-label="Настройки">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-1-1.4 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.4-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 1 1.4 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1z"/></svg>
+    </button>
+  </header>
+
+  <main id="main">
+    <!-- HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="home">
+        <span class="sigil" id="sigil" aria-hidden="true"></span>
+        <p class="eyebrow" id="homeEyebrow">VPN · MOBILE</p>
+        <button class="core" id="powerBtn" aria-label="Подключение">
+          <span class="core-ring"></span>
+          <span class="core-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3.2v8.6"/><path d="M6.7 6.8a7.6 7.6 0 1 0 10.6 0"/></svg></span>
+        </button>
+        <h1 class="home-title" id="homeTitle">Отключено</h1>
+        <p class="home-sub" id="homeSub">Нажмите, чтобы подключиться</p>
+      </div>
+
+      <button class="strategy-card" id="homeStrategy">
+        <div class="row between">
+          <span class="label">Стратегия</span>
+          <span class="chev">›</span>
+        </div>
+        <div class="strategy-name" id="homeStrategyName">Не выбрана</div>
+        <div class="strategy-cmd" id="homeStrategyCmd">—</div>
+      </button>
+
+      <div class="meta-chips">
+        <span class="meta"><i>Адрес</i><b id="chipProxy">127.0.0.1:1080</b></span>
+        <span class="meta"><i>Сеть</i><b id="chipNetwork">Wi-Fi</b></span>
+        <span class="meta"><i>Приложения</i><b id="chipApps">Все</b></span>
+        <span class="meta"><i>Стратегия</i><b id="chipStrategy">—</b></span>
+      </div>
+
+      <div class="best-card" id="homeBest" data-action="apply-best" hidden>
+        <div class="row between">
+          <span class="cat">РЕКОМЕНДОВАНО</span>
+          <span class="best-pct" id="homeBestPct">—</span>
+        </div>
+        <div class="bar"><i id="homeBestBar"></i></div>
+        <div class="strategy-cmd mono" id="homeBestCmd">—</div>
+        <span class="best-apply">Применить одним касанием</span>
+      </div>
+      <button class="btn primary wide" data-action="start-tune">Подобрать заново</button>
+    </section>
+
+    <!-- STRATEGIES -->
+    <section class="screen" id="screen-strategies">
+      <div class="page-head">
+        <button class="icon-btn" data-action="back" aria-label="Назад">←</button>
+        <h2 id="strategiesTitle">Стратегии</h2>
+      </div>
+      <div class="best-board">
+        <span class="best-board-label">Лучший результат</span>
+        <span class="best-board-score" id="bestScore">—<i>/—</i></span>
+        <span class="best-board-sub" id="bestSub">проверка ещё не запускалась</span>
+        <div class="best-board-actions">
+          <button class="best-board-btn" id="inlineStart">Начать проверку</button>
+          <button class="best-board-btn stop" id="inlineStop" disabled>Стоп</button>
+        </div>
+      </div>
+      <div class="strategy-rows" id="strategyList"></div>
+      <div class="spacer"></div>
+      <div class="actions">
+        <button class="btn ghost" data-action="open" data-screen="editor">Редактор</button>
+      </div>
+    </section>
+
+    <!-- APPS -->
+    <section class="screen" id="screen-apps">
+      <div class="page-head">
+        <h2 id="appsTitle">Приложения</h2>
+        <p class="muted" id="appsHint">Обрабатываются все приложения</p>
+      </div>
+      <div class="segmented" id="appsMode">
+        <button data-mode="whitelist">Только выбранные</button>
+        <button data-mode="blacklist">Все, кроме</button>
+        <button data-mode="disable">Все приложения</button>
+      </div>
+      <p class="apps-note">«Только выбранные» — обход для отмеченных приложений. «Все, кроме» — отмеченные работают напрямую, без обхода.</p>
+      <div class="chips quick-apps" id="quickApps">
+        <button class="chip" data-quick="tiktok">TikTok</button>
+        <button class="chip" data-quick="telegram">Telegram</button>
+        <button class="chip" data-quick="youtube">YouTube</button>
+        <button class="chip" data-quick="2gis">2ГИС</button>
+        <button class="chip" data-quick="anixart">Anixart</button>
+      </div>
+      <input class="search" id="appsSearch" placeholder="Поиск приложений" autocomplete="off">
+      <div class="list apps" id="appsList"></div>
+      <div class="spacer"></div>
+      <div class="actions">
+        <button class="btn primary" id="appsApply">Применить</button>
+      </div>
+    </section>
+
+    <!-- TUNE -->
+    <section class="screen" id="screen-tune">
+      <div class="page-head">
+        <button class="icon-btn" data-action="back" aria-label="Назад">←</button>
+        <h2 id="tuneTitle">Подбор</h2>
+        <p class="muted" id="tuneHint">Проверка стратегий на этом устройстве</p>
+      </div>
+      <div class="actions tune-actions">
+        <button class="btn primary" id="tuneStart">Начать проверку</button>
+        <button class="btn ghost" id="tuneStop" disabled>Остановить</button>
+      </div>
+      <div class="tune-best">
+        <div class="cat">ЛУЧШИЙ РЕЗУЛЬТАТ</div>
+        <div class="tune-score"><b id="tuneBest">—</b><span id="tuneTotal">/32</span></div>
+        <div class="bar"><i id="tuneBar"></i></div>
+        <div class="tune-best-cmd mono" id="tuneBestCmd">—</div>
+      </div>
+      <div class="list tune-list" id="tuneList"></div>
+      <div class="spacer"></div>
+    </section>
+
+    <!-- EDITOR -->
+    <section class="screen" id="screen-editor">
+      <div class="page-head">
+        <button class="icon-btn" data-action="back" aria-label="Назад">←</button>
+        <h2 id="editorTitle">Редактор</h2>
+        <p class="muted">Своя команда ByeDPI. Пробелы и регистр важны.</p>
+      </div>
+      <textarea class="cmd-input" id="cmdInput" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      <div class="chips" id="cmdPresets"></div>
+      <div class="actions">
+        <button class="btn ghost" id="cmdPaste">Вставить</button>
+        <button class="btn ghost" id="cmdClear">Очистить</button>
+        <button class="btn primary" id="cmdApply">Применить</button>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" id="screen-settings">
+      <div class="page-head">
+        <h2 id="settingsTitle">Настройки</h2>
+      </div>
+      <input class="search" id="settingsSearch" placeholder="Поиск по настройкам" autocomplete="off">
+
+      <button class="theme-card" id="themeCard">
+        <span class="theme-dot" id="themeDot"></span>
+        <span class="theme-meta">
+          <span class="theme-title" id="themeTitle">Сигма</span>
+          <span class="theme-sub" id="themeSub">Тема · анимации включены</span>
+        </span>
+        <span class="chev">›</span>
+      </button>
+
+      <div id="settingsList"></div>
+      <div class="dns-custom" id="dnsCustom" hidden>
+        <input id="dnsInput" inputmode="numeric" autocomplete="off" placeholder="1.1.1.1">
+        <button class="btn primary" id="dnsSave">OK</button>
+      </div>
+      <div class="spacer"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Навигация">
+    <button class="tab active" data-tab="home"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 10.6 12 4l8.5 6.6V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg></span><span class="tab-label">Главная</span></button>
+    <button class="tab" data-tab="strategies"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 2.5 5 13.2h6l-1 8.3 8-11.2h-6z"/></svg></span><span class="tab-label">Стратегии</span></button>
+    <button class="tab" data-tab="apps"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.4"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.4"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.4"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.4"/></svg></span><span class="tab-label">Приложения</span></button>
+    <button class="tab" data-tab="settings"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-1-1.4 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.4-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 1 1.4 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1z"/></svg></span><span class="tab-label">Настройки</span></button>
+  </nav>
+</div>
+
+<div class="overlay" id="overlay" hidden></div>
+<div class="sheet" id="sheet" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
